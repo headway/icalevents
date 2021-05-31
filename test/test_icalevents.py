@@ -345,3 +345,22 @@ class ICalEventsTests(unittest.TestCase):
 
         self.assertEqual(e1.transparent, True, "respect transparency")
         self.assertEqual(e2.transparent, False, "respect opaqueness")
+
+    def test_attendee(self):
+        ical = "test/test_data/attendee.ics"
+        start = date(2021, 1, 1)
+        end = date(2021, 12, 31)
+
+        [e1, e2] = icalevents.events(file=ical, start=start, end=end)
+
+        self.assertEqual(type(e1.attendee), list, "multiple attendees")
+        self.assertEqual(e1.attendee[0].cutype, 'INDIVIDUAL', "attendee 0 is an individual")
+        self.assertEqual(e1.attendee[0].partstat, 'DECLINED', "attendee 0 has declined")
+        self.assertEqual(e1.attendee[0].role, 'REQ-PARTICIPANT', "attendee 0 is required")
+        self.assertEqual(e1.attendee[0].cn, 'emailtest', "attendee 0 has a name")
+        self.assertEqual(e1.attendee[0].value, 'mailto:emailtest@gmail.com', "attendee 0 has the email as value")
+        self.assertEqual(str(e1.attendee[0]), 'mailto:emailtest@gmail.com', "attendee 0 can be converted to string")
+        self.assertEqual(e1.attendee[1].partstat, 'ACCEPTED', "attendee 1 has accepted")
+
+        self.assertNotEqual(type(e2.attendee), list, "single attendee")
+        self.assertEqual(e2.attendee.cutype, 'ROOM', "second events attendee 0 is a room")

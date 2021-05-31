@@ -24,6 +24,19 @@ def now():
     """
     return datetime.now(UTC)
 
+class CalAddress:
+    """
+    Represents an attendee or organizer.
+    """
+    def __init__(self, value=None, cn=None, cutype=None, role=None, partstat=None):
+        self.cn = cn
+        self.cutype = cutype
+        self.role = role
+        self.partstat = partstat
+        self.value = value
+
+    def __str__(self):
+        return self.value
 
 class Event:
     """
@@ -180,14 +193,34 @@ def create_event(component, tz=UTC):
     event.location = encode(component.get('location'))
 
     if component.get('attendee'):
-        event.attendee = component.get('attendee')
-        if type(event.attendee) is list:
-            temp = []
-            for a in event.attendee:
-                temp.append(a.encode('utf-8').decode('ascii'))
-            event.attendee = temp
-        else:
-            event.attendee = event.attendee.encode('utf-8').decode('ascii')
+        attendee = component.get('attendee')
+        if not type(attendee) is list:
+            attendee = [attendee]
+
+        result = []
+        for a in attendee:
+            params = {
+                "value": a.encode('utf-8').decode('ascii')
+            }
+            if 'CUTYPE' in a.params:
+                params['cutype'] = a.params['CUTYPE']
+
+            if 'PARTSTAT' in a.params:
+                params['partstat'] = a.params['PARTSTAT']
+
+            if 'ROLE' in a.params:
+                params['role'] = a.params['ROLE']
+
+            if 'CN' in a.params:
+                params['cn'] = a.params['CN']
+
+            result.append(CalAddress(**params))
+
+        if len(result) > 1:
+            event.attendee = result
+        elif len(result) == 1:
+            event.attendee = result[0]
+                
     else:
         event.attendee = str(None)
 
