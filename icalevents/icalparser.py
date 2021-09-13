@@ -139,6 +139,7 @@ class Event:
         ne.created = self.created
         ne.last_modified = self.last_modified
         ne.categories = self.categories
+        ne.sequence = self.sequence
 
         return ne
 
@@ -407,11 +408,23 @@ def parse_events(content, start=None, end=None, default_span=timedelta(days=7)):
                 exdate = "%04d%02d%02d" % (e.start.year, e.start.month, e.start.day)
                 if exdate not in exceptions:
                     found.append(e)
+
     # Filter out all events that are moved as indicated by the recurrence-id prop
     return [
         event for event in found 
-        if e.sequence is None or not (event.uid, event.start, e.sequence) in recurrence_ids
+        if event.sequence is None or not is_recurrence_event(recurrence_ids, event.uid, event.start, event.sequence) 
     ]
+
+def is_recurrence_event(recurrence_ids, uid, start, sequence):
+    for recurrence in recurrence_ids:
+        if recurrence[0] == uid and recurrence[1] == start:
+            # If the recurrence event's sequence is less than the original rrule event
+            # we ignore it
+            if recurrence[2] >= sequence:
+                return True
+            else:
+                return False
+    return False
 
 
 def parse_rrule(component, tz=UTC):
