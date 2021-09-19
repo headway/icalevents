@@ -311,9 +311,9 @@ def parse_events(content, start=None, end=None, default_span=timedelta(days=7)):
             # value from the name as a fallback.
             timezones[name] = timezone(name)
 
-    # If there's exactly one timezone in the file,
+    # If there's at least one timezone in the file,
     # assume it applies globally, otherwise UTC
-    if len(timezones) == 1:
+    if len(timezones):
         cal_tz = get_timezone(list(timezones)[0])
     else:
         cal_tz = UTC
