@@ -139,6 +139,7 @@ class Event:
         ne.created = self.created
         ne.last_modified = self.last_modified
         ne.categories = self.categories
+        ne.sequence = self.sequence
 
         return ne
 
@@ -310,9 +311,9 @@ def parse_events(content, start=None, end=None, default_span=timedelta(days=7)):
             # value from the name as a fallback.
             timezones[name] = timezone(name)
 
-    # If there's exactly one timezone in the file,
+    # If there's at least one timezone in the file,
     # assume it applies globally, otherwise UTC
-    if len(timezones) == 1:
+    if len(timezones):
         cal_tz = get_timezone(list(timezones)[0])
     else:
         cal_tz = UTC
@@ -323,26 +324,12 @@ def parse_events(content, start=None, end=None, default_span=timedelta(days=7)):
     found = []
     recurrence_ids = []
 
-    # Skip dates that are stored as exceptions.
-    exceptions = {}
     for component in calendar.walk():
         if component.name == "VEVENT":
             e = create_event(component, cal_tz)
-            
+
             if 'RECURRENCE-ID' in component:
                 recurrence_ids.append((e.uid, component['RECURRENCE-ID'].dt, e.sequence))
-
-            if 'EXDATE' in component:
-                # Deal with the fact that sometimes it's a list and
-                # sometimes it's a singleton
-                exlist = []
-                if isinstance(component['EXDATE'], list):
-                    exlist = component['EXDATE']
-                else:
-                    exlist.append(component['EXDATE'])
-                for ex in exlist:
-                    exdate = ex.to_ical().decode("UTF-8")
-                    exceptions[exdate[0:8]] = exdate
 
             # Attempt to work out what timezone is used for the start
             # and end times. If the timezone is defined in the calendar,
@@ -400,18 +387,36 @@ def parse_events(content, start=None, end=None, default_span=timedelta(days=7)):
                         # timezone from the start time, we'll have lost that.
                         ecopy.end = dtstart + duration
 
-                    exdate = "%04d%02d%02d" % (ecopy.start.year, ecopy.start.month, ecopy.start.day)
-                    if exdate not in exceptions:
-                        found.append(ecopy)
+                    found.append(ecopy)
             elif e.end >= start and e.start <= end:
-                exdate = "%04d%02d%02d" % (e.start.year, e.start.month, e.start.day)
-                if exdate not in exceptions:
-                    found.append(e)
+                found.append(e)
+
     # Filter out all events that are moved as indicated by the recurrence-id prop
     return [
-        event for event in found 
-        if e.sequence is None or not (event.uid, event.start, e.sequence) in recurrence_ids
+        event for event in found
+        if not is_replaced_by_recurrence_id_instance(event, recurrence_ids)
     ]
+
+
+def is_replaced_by_recurrence_id_instance(event, recurrence_ids):
+    # calendars that use RECURRENCE-ID also use sequences
+    if event.sequence is None:
+        return False
+
+    # only recurring events can be replaced by instances
+    if not event.recurring:
+        return False
+
+    # check if the recurring event has a RECURRENCE-ID instance that replaces it
+    for uid, start, sequence in recurrence_ids:
+        if uid == event.uid and start == event.start:
+            # If the recurrence event's sequence is less than the original rrule event
+            # we ignore it
+            if sequence >= event.sequence:
+                return True
+            else:
+                return False
+    return False
 
 
 def parse_rrule(component, tz=UTC):
