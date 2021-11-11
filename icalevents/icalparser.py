@@ -50,6 +50,8 @@ class Event:
         self.attendee = None
         self.organizer = None
         self.categories = None
+        self.status = None
+        self.url = None
 
     def time_left(self, time=None):
         """
@@ -141,6 +143,8 @@ class Event:
         ne.created = self.created
         ne.last_modified = self.last_modified
         ne.categories = self.categories
+        ne.status = self.status
+        ne.url = self.url
 
         return ne
 
@@ -226,6 +230,12 @@ def create_event(component, tz=UTC):
         for category in categories:
             encoded_categories.append(encode(category))
         event.categories = encoded_categories
+
+    if component.get("status"):
+        event.status = encode(component.get("status"))
+
+    if component.get("url"):
+        event.url = encode(component.get("url"))
 
     return event
 
@@ -457,12 +467,9 @@ def parse_rrule(component, tz=UTC):
             rdtstart = normalize(rdtstart, tz=tz)
 
         # Remove/add timezone to rrule until dates depending on component
-        if type(rdtstart) is date:
-            for index, rru in enumerate(rrules):
-                if "UNTIL" in rru:
-                    rrules[index]["UNTIL"] = adjust_timezone(
-                        component, rru["UNTIL"], tz
-                    )
+        for index, rru in enumerate(rrules):
+            if "UNTIL" in rru:
+                rrules[index]["UNTIL"] = adjust_timezone(component, rru["UNTIL"], tz)
 
         # Parse the rrules, might return a rruleset instance, instead of rrule
         rule = rrulestr(

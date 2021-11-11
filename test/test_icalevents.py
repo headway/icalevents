@@ -156,6 +156,21 @@ class ICalEventsTests(unittest.TestCase):
         self.assertEqual(ev_2.all_day, True, "All day event")
         self.assertEqual(ev_2.summary, "Busy")
 
+    def test_events_rrule_until_only_date(self):
+        ical = "test/test_data/rrule_until_only_date.ics"
+        start = date(2021, 9, 29)
+        end = date(2021, 10, 19)
+        evs = icalevents.events(file=ical, start=start, end=end)
+        self.assertEqual(len(evs), 8)
+        self.assertEqual(
+            evs[0].start,
+            datetime(2021, 9, 29, 13, 0, 0, 0, tzinfo=gettz("America/Boise")),
+        )
+        self.assertEqual(
+            evs[-1].start,
+            datetime(2021, 10, 18, 13, 0, 0, 0, tzinfo=gettz("America/Boise")),
+        )
+
     def test_events_rrule_until(self):
         ical = "test/test_data/rrule_until.ics"
         start = date(2019, 4, 2)
@@ -421,3 +436,17 @@ class ICalEventsTests(unittest.TestCase):
 
         self.assertEqual(e1.transparent, True, "respect transparency")
         self.assertEqual(e2.transparent, False, "respect opaqueness")
+
+    def test_status_and_url(self):
+        ical = "test/test_data/status_and_url.ics"
+        start = date(2018, 10, 30)
+        end = date(2018, 10, 31)
+
+        [ev1, ev2, ev3, ev4, ev5] = icalevents.events(file=ical, start=start, end=end)
+        self.assertEqual(ev1.status, "TENTATIVE")
+        self.assertEqual(ev1.url, None)
+        self.assertEqual(ev2.status, "CONFIRMED")
+        self.assertEqual(ev2.url, "https://example.com/")
+        self.assertEqual(ev3.status, "CANCELLED")
+        self.assertEqual(ev4.status, "CANCELLED")
+        self.assertEqual(ev5.status, None)
