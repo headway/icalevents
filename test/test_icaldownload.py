@@ -6,7 +6,6 @@ import logging
 
 
 class ICalDownloadTests(unittest.TestCase):
-
     def test_apple_data_fix(self):
         data = """
 DTSTART:18831118T120702
@@ -50,7 +49,7 @@ DTSTART:19180331T020000
 
         expected = None
 
-        with open(result, mode='r', encoding='utf-8') as f:
+        with open(result, mode="r", encoding="utf-8") as f:
             expected = f.read()
 
         content = icalevents.icaldownload.ICalDownload().data_from_file(file)
@@ -63,10 +62,12 @@ DTSTART:19180331T020000
 
         expected = None
 
-        with open(result, mode='r', encoding='utf-8') as f:
+        with open(result, mode="r", encoding="utf-8") as f:
             expected = f.read()
 
-        content = icalevents.icaldownload.ICalDownload().data_from_file(file, apple_fix=True)
+        content = icalevents.icaldownload.ICalDownload().data_from_file(
+            file, apple_fix=True
+        )
 
         self.assertEqual(expected, content, "content form iCal file, google format")
 
@@ -93,3 +94,13 @@ DTSTART:19180331T020000
             os.chdir("..")
             shutil.rmtree("tmp")
 
+    def test_empty_file(self):
+        empty_ical = "test/test_data/empty.ics"
+
+        with self.assertRaises(IOError) as cm:
+            icalevents.icaldownload.ICalDownload().data_from_file(empty_ical)
+
+        self.assertEqual(
+            str(cm.exception),
+            "File test/test_data/empty.ics is not readable or is empty!",
+        )
